@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T24 Account Opening Real-time Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #27ae60;
+        }
+
+        .notification.info {
+            background-color: #3498db;
+        }
+
+        .notification.warning {
+            background-color: #f39c12;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .form-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .highlight-new {
+            animation: highlightNew 2s ease-out;
+        }
+
+        @keyframes highlightNew {
+            0% { background-color: #27ae60; }
+            100% { background-color: transparent; }
+        }
+
+        .highlight-updated {
+            animation: highlightUpdated 2s ease-out;
+        }
+
+        @keyframes highlightUpdated {
+            0% { background-color: #f39c12; }
+            100% { background-color: transparent; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 T24 Account Opening Real-time Demo</h1>
+        
+        <div id="connectionStatus" class="status disconnected">
+            ❌ Disconnected from server
+        </div>
+
+        <div class="controls">
+            <button id="connectBtn" class="btn-primary">Connect to WebSocket</button>
+            <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
+            <button id="refreshBtn" class="btn-warning">Refresh Data</button>
+            <button id="clearBtn" class="btn-secondary">Clear Table</button>
+        </div>
+
+        <div class="form-container">
+            <h3>Submit New Account Opening Request</h3>
+            <form id="accountForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerName">Customer Name:</label>
+                        <input type="text" id="customerName" name="customerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customerIdNumber">ID Number:</label>
+                        <input type="text" id="customerIdNumber" name="customerIdNumber" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dob">Date of Birth:</label>
+                        <input type="text" id="dob" name="dob" placeholder="YYYY-MM-DD" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nationality">Nationality:</label>
+                        <input type="text" id="nationality" name="nationality" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="address">Residential Address:</label>
+                        <input type="text" id="address" name="address" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-success">Submit Account Opening Request</button>
+            </form>
+        </div>
+
+        <h3>📊 Account Opening Requests (Real-time)</h3>
+        <div id="loadingIndicator" class="loading">Loading account opening data...</div>
+        
+        <table id="accountTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Customer ID</th>
+                    <th>Customer Name</th>
+                    <th>ID Number</th>
+                    <th>Date of Birth</th>
+                    <th>Nationality</th>
+                    <th>Address</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody id="accountTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let stompClient = null;
+        let connected = false;
+
+        // DOM elements
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const accountTable = document.getElementById('accountTable');
+        const accountTableBody = document.getElementById('accountTableBody');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const accountForm = document.getElementById('accountForm');
+
+        // Event listeners
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        refreshBtn.addEventListener('click', loadAccountData);
+        clearBtn.addEventListener('click', clearTable);
+        accountForm.addEventListener('submit', submitAccountRequest);
+
+        // WebSocket connection
+        function connect() {
+            updateConnectionStatus('connecting', '🔄 Connecting to server...');
+            connectBtn.disabled = true;
+
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, 
+                function (frame) {
+                    connected = true;
+                    updateConnectionStatus('connected', '✅ Connected to server');
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    
+                    // Subscribe to account opening notifications
+                    stompClient.subscribe('/topic/account-opening', function (notification) {
+                        const data = JSON.parse(notification.body);
+                        handleAccountNotification(data);
+                    });
+                    
+                    // Load initial data
+                    loadAccountData();
+                    showNotification('Connected to real-time notifications!', 'success');
+                },
+                function (error) {
+                    connected = false;
+                    updateConnectionStatus('disconnected', '❌ Connection failed');
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    showNotification('Failed to connect to server', 'warning');
+                }
+            );
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+                connected = false;
+                updateConnectionStatus('disconnected', '❌ Disconnected from server');
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                showNotification('Disconnected from server', 'info');
+            }
+        }
+
+        function updateConnectionStatus(status, message) {
+            connectionStatus.className = `status ${status}`;
+            connectionStatus.textContent = message;
+        }
+
+        // Data loading
+        async function loadAccountData() {
+            try {
+                loadingIndicator.style.display = 'block';
+                accountTable.style.display = 'none';
+                
+                const response = await fetch('/api/v1/t24/accounts');
+                if (response.ok) {
+                    const accounts = await response.json();
+                    populateTable(accounts);
+                    showNotification(`Loaded ${accounts.length} account opening records`, 'info');
+                } else {
+                    throw new Error('Failed to load data');
+                }
+            } catch (error) {
+                showNotification('Failed to load account data', 'warning');
+                console.error('Error loading account data:', error);
+            } finally {
+                loadingIndicator.style.display = 'none';
+                accountTable.style.display = 'table';
+            }
+        }
+
+        function populateTable(accounts) {
+            accountTableBody.innerHTML = '';
+            accounts.forEach(account => {
+                addAccountRow(account);
+            });
+        }
+
+        function addAccountRow(account, isNew = false) {
+            const row = document.createElement('tr');
+            row.id = `account-${account.id}`;
+            
+            if (isNew) {
+                row.classList.add('highlight-new');
+            }
+            
+            row.innerHTML = `
+                <td>${account.id}</td>
+                <td>${account.customerId}</td>
+                <td>${account.customerName}</td>
+                <td>${account.customerIdentificationNumber}</td>
+                <td>${account.dob}</td>
+                <td>${account.nationality}</td>
+                <td>${account.residentialAddress}</td>
+                <td><span class="status-badge status-${account.status.toLowerCase()}">${account.status}</span></td>
+                <td>${account.result}</td>
+                <td>${new Date(account.timestamp).toLocaleString()}</td>
+            `;
+            
+            accountTableBody.appendChild(row);
+        }
+
+        function updateAccountRow(account) {
+            const existingRow = document.getElementById(`account-${account.id}`);
+            if (existingRow) {
+                existingRow.classList.add('highlight-updated');
+                const statusCell = existingRow.querySelector('.status-badge');
+                statusCell.textContent = account.status;
+                statusCell.className = `status-badge status-${account.status.toLowerCase()}`;
+                
+                // Remove highlight after animation
+                setTimeout(() => {
+                    existingRow.classList.remove('highlight-updated');
+                }, 2000);
+            }
+        }
+
+        // Handle WebSocket notifications
+        function handleAccountNotification(notification) {
+            console.log('Received notification:', notification);
+            
+            switch (notification.type) {
+                case 'CREATED':
+                    addAccountRow(notification, true);
+                    showNotification(`New account opening request from ${notification.customerName}`, 'success');
+                    break;
+                    
+                case 'STATUS_CHANGED':
+                    updateAccountRow(notification);
+                    showNotification(
+                        `Account ${notification.id} status changed from ${notification.previousStatus} to ${notification.status}`,
+                        'info'
+                    );
+                    break;
+                    
+                case 'UPDATED':
+                    updateAccountRow(notification);
+                    showNotification(`Account ${notification.id} updated`, 'info');
+                    break;
+            }
+        }
+
+        // Form submission
+        async function submitAccountRequest(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const requestData = {
+                customerName: formData.get('customerName'),
+                customerIdentificationNumber: formData.get('customerIdNumber'),
+                dob: formData.get('dob'),
+                nationality: formData.get('nationality'),
+                residentialAddress: formData.get('address')
+            };
+            
+            try {
+                const response = await fetch('/api/v1/t24/accounts/open', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('Account opening request submitted successfully!', 'success');
+                    event.target.reset();
+                } else {
+                    throw new Error('Failed to submit request');
+                }
+            } catch (error) {
+                showNotification('Failed to submit account opening request', 'warning');
+                console.error('Error submitting request:', error);
+            }
+        }
+
+        // Utility functions
+        function clearTable() {
+            accountTableBody.innerHTML = '';
+            showNotification('Table cleared', 'info');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        // Auto-connect on page load
+        window.addEventListener('load', () => {
+            setTimeout(connect, 1000);
+        });
+    </script>
+</body>
+</html> 

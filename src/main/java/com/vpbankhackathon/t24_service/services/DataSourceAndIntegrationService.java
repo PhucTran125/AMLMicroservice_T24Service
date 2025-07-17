@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 
@@ -27,6 +28,9 @@ public class DataSourceAndIntegrationService {
 
     @Autowired
     private AccountOpeningRepository accountOpeningRepository;
+
+    @Autowired
+    private AccountOpeningNotificationService notificationService;
 
     @Autowired
     private TransactionProducer transactionProducer;
@@ -42,10 +46,8 @@ public class DataSourceAndIntegrationService {
     // API 1: Chuyển tiền
     public ResponseDTO processTransfer(TransactionRequestDTO request) {
         Transaction entity = mapToTransaction(request);
-
-        entity.setStatus("pending");
         transactionRepository.save(entity);
-//        transactionProducer.sendMessage(entity);
+        // transactionProducer.sendMessage(entity);
 
         ResponseDTO response = new ResponseDTO();
         response.setTransactionId(entity.getId().toString());
@@ -63,29 +65,20 @@ public class DataSourceAndIntegrationService {
     // API 2: Mở tài khoản
     public ResponseDTO openAccount(AccountOpeningRequestDTO request) {
         AccountOpening entity = mapToAccountOpening(request);
-
-        entity.setStatus("sent");
         accountOpeningRepository.save(entity);
-        accountOpeningProducer.sendMessage(entity);
+
+        // Send real-time notification for new account opening request
+        notificationService.notifyAccountOpeningCreated(entity);
+
+        VerifyCustomerRequestDTO verifyCustomerRequest = mapToVerifyCustomerRequest(entity);
+        verifyCustomerProducer.sendMessage(verifyCustomerRequest);
 
         ResponseDTO response = new ResponseDTO();
         response.setTransactionId(UUID.randomUUID().toString());
-        response.setStatus("accepted");
-        response.setMessage("Pending KYC screening");
+        response.setStatus("OK");
+        response.setMessage("Pending Customer screening");
         return response;
     }
-
-    // Mô phỏng T24 tạo sự kiện
-//    @Scheduled(fixedRate = 5000)
-//    public void simulateT24Events() {
-//        if (random.nextBoolean()) {
-//            TransactionRequestDTO transfer = generateTransferRequest();
-//            processTransfer(transfer);
-//        } else {
-//            AccountOpeningRequestDTO account = generateAccountOpeningRequest();
-//            openAccount(account);
-//        }
-//    }
 
     private Transaction mapToTransaction(TransactionRequestDTO dto) {
         Transaction entity = new Transaction();
@@ -104,6 +97,7 @@ public class DataSourceAndIntegrationService {
 
     private AccountOpening mapToAccountOpening(AccountOpeningRequestDTO dto) {
         AccountOpening entity = new AccountOpening();
+        entity.setCustomerId(1000 + random.nextLong(9000)); // Generate a random 4-digit integer);
         entity.setTimestamp(Instant.now().toEpochMilli());
         entity.setCustomerName(dto.getCustomerName());
         entity.setCustomerIdentificationNumber(dto.getCustomerIdentificationNumber());
@@ -115,25 +109,96 @@ public class DataSourceAndIntegrationService {
 
     private VerifyCustomerRequestDTO mapToVerifyCustomerRequest(Transaction entity) {
         VerifyCustomerRequestDTO request = new VerifyCustomerRequestDTO();
-        request.setTransactionId(entity.getId().toString());
         request.setCustomerId(entity.getCustomerId());
         request.setCustomerName(entity.getCustomerName());
         request.setCustomerIdentificationNumber(entity.getCustomerIdentificationNumber());
+        request.setTaskType(T24AMLResult.TaskType.TRANSACTION_TRANSFER);
+        return request;
+    }
+
+    private VerifyCustomerRequestDTO mapToVerifyCustomerRequest(AccountOpening entity) {
+        VerifyCustomerRequestDTO request = new VerifyCustomerRequestDTO();
+        request.setCustomerId(entity.getCustomerId());
+        request.setCustomerName(entity.getCustomerName());
+        request.setCustomerIdentificationNumber(entity.getCustomerIdentificationNumber());
+        request.setDob(entity.getDob());
+        request.setNationality(entity.getNationality());
+        request.setResidentialAddress(entity.getResidentialAddress());
+        request.setTaskType(T24AMLResult.TaskType.ACCOUNT_OPENING);
         return request;
     }
 
     public void processAMLResult(T24AMLResult result) {
-        if (result.getType() == "CUSTOMER_SCREENING_RESULT") {
-            AccountOpening accountOpening = accountOpeningRepository.getReferenceById(result.getId());
-
-            accountOpening.setStatus(result.getStatus());
-            accountOpeningRepository.save(accountOpening);
+        if (result.getId() == null)
+            return;
+        if (Objects.equals(result.getTaskType(), T24AMLResult.TaskType.ACCOUNT_OPENING)) {
+            processAMLResultForAccountOpening(result);
         } else {
-            Transaction transaction = transactionRepository.getReferenceById(result.getId());
+            processAMLResultForTransaction(result);
+        }
+    }
 
-            transaction.setStatus(result.getStatus());
-            transactionRepository.save(transaction);
+    private void processAMLResultForAccountOpening(T24AMLResult result) {
+        AccountOpening accountOpening = accountOpeningRepository.findByCustomerIdAndStatus(
+                result.getId(),
+                AccountOpening.AccountOpeningStatus.PENDING);
+        if (accountOpening == null)
+            return;
+
+        // Capture previous status for notification
+        AccountOpening.AccountOpeningStatus previousStatus = accountOpening.getStatus();
+
+        switch (result.getStatus()) {
+            case CLEAR:
+                accountOpening.setStatus(AccountOpening.AccountOpeningStatus.APPROVED);
+                accountOpening.setResult("Account opening approved based on AML result");
+                break;
+            case SUSPENDED:
+            case SUSPICIOUS:
+                accountOpening.setStatus(AccountOpening.AccountOpeningStatus.REJECTED);
+                accountOpening.setResult("Account opening rejected due to AML result: " + result.getReason());
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown status: " + result.getStatus());
         }
 
+        accountOpeningRepository.save(accountOpening);
+
+        // Send real-time notification for status change
+        notificationService.notifyAccountOpeningStatusChanged(accountOpening, previousStatus);
+    }
+
+    private void processAMLResultForTransaction(T24AMLResult result) {
+        Transaction transaction = transactionRepository.findByIdAndStatus(
+                result.getId(),
+                Transaction.TransactionStatus.PENDING);
+        if (Objects.equals(result.getResultType(), T24AMLResult.ResultType.CUSTOMER_SCREENING_RESULT)) {
+            switch (result.getStatus()) {
+                case CLEAR:
+                    transactionProducer.sendMessage(transaction);
+                    break;
+                case SUSPENDED:
+                case SUSPICIOUS:
+                    transactionRepository.updateStatusByIdAndCurrentStatus(
+                            result.getId(),
+                            Transaction.TransactionStatus.REJECTED,
+                            Transaction.TransactionStatus.PENDING);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown status: " + result.getStatus());
+            }
+        } else {
+            switch (result.getStatus()) {
+                case CLEAR:
+                    transaction.setStatus(Transaction.TransactionStatus.APPROVED);
+                    break;
+                case SUSPENDED:
+                case SUSPICIOUS:
+                    transaction.setStatus(Transaction.TransactionStatus.REJECTED);
+                default:
+                    throw new IllegalArgumentException("Unknown status: " + result.getStatus());
+            }
+            transactionRepository.save(transaction);
+        }
     }
 }

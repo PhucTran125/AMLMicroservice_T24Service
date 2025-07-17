@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T24 Service Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+
+        .demo-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #3498db, #2ecc71);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .features {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .feature {
+            margin: 10px 0;
+            color: #34495e;
+        }
+
+        .feature::before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+
+        .api-info {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .api-endpoint {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 T24 Service</h1>
+        <p class="subtitle">Real-time AML Microservices Demo</p>
+        
+        <a href="/account-opening-demo.html" class="demo-btn">
+            🚀 Launch Real-time Demo
+        </a>
+        
+        <div class="features">
+            <div class="feature">Real-time WebSocket notifications</div>
+            <div class="feature">Account opening requests tracking</div>
+            <div class="feature">Live status updates from AML processing</div>
+            <div class="feature">Interactive form submission</div>
+            <div class="feature">Beautiful responsive UI</div>
+        </div>
+        
+        <div class="api-info">
+            <strong>Available REST Endpoints:</strong><br>
+            <div class="api-endpoint">GET /api/v1/t24/accounts</div>
+            <div class="api-endpoint">POST /api/v1/t24/accounts/open</div>
+            <div class="api-endpoint">GET /api/v1/t24/accounts/status/{status}</div>
+            <div class="api-endpoint">WebSocket: /ws</div>
+        </div>
+    </div>
+</body>
+</html> 

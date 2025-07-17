@@ -11,10 +11,9 @@ public class TransactionRequestDTO {
     private String currency; // Loại tiền (e.g., VND, USD)
     private Long sourceAccountNumber; // Tài khoản nguồn
     private Long destinationAccountNumber; // Tài khoản đích
-    private String customerId; // Mã khách hàng
+    private Long customerId; // Mã khách hàng
     private String customerName; // Tên khách hàng
     private String customerIdentificationNumber; // Số định danh (CCCD/CMND/Hộ chiếu)
-    private String status; // Trạng thái giao dịch (e.g., "pending", "completed", "failed")
     private String country; // Quốc gia
     private String date;
 }

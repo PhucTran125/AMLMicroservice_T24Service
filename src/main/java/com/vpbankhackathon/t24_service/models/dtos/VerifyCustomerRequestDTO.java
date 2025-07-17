@@ -4,8 +4,11 @@ import lombok.Data;
 
 @Data
 public class VerifyCustomerRequestDTO {
-    private String transactionId;
-    private String customerId;
-    private String customerName; // Tên khách hàng
-    private String customerIdentificationNumber; // Số định danh (CCCD/CMND/Hộ chiếu)
+    private Long customerId;
+    private String customerName;
+    private String customerIdentificationNumber;
+    private String dob;
+    private String nationality;
+    private String residentialAddress;
+    private T24AMLResult.TaskType taskType;
 }

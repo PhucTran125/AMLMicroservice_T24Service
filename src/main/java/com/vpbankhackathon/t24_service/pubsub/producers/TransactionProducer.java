@@ -19,19 +19,17 @@ public class TransactionProducer {
 
     public void sendMessage(Transaction request) {
         try {
-
             System.out.println("Attempting to send message to topic: " + topicName);
-            System.out.println("Message content: " + request.getCustomerId());
 
             CompletableFuture<SendResult<String, Object>> future =
                     kafkaTemplate.send(topicName, request);
             future.whenComplete((result, ex) -> {
                 if (ex == null) {
-                    System.out.println("Sent message for customer=[" + request.getCustomerId() +
+                    System.out.println("Sent message for transaction=[" + request.getId() +
                             "] with offset=[" + result.getRecordMetadata().offset() + "]");
                 } else {
-                    System.err.println("Unable to send message for customer=[" +
-                            request.getCustomerId() + "] due to : " + ex.getMessage());
+                    System.err.println("Unable to send message for transaction=[" +
+                            request.getId() + "] due to : " + ex.getMessage());
                 }
             });
         } catch (Exception e) {

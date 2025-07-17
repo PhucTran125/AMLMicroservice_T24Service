@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class AccountOpeningRequestDTO {
+    private Long customerId; // ID khách hàng
     private String customerName; // Tên khách hàng
     private String customerIdentificationNumber; // Số định danh (CCCD/CMND/Hộ chiếu)
     private String dob;
