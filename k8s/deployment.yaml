@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t24-service
+  namespace: ${NAMESPACE}
+  labels:
+    app: t24-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: t24-service
+  template:
+    metadata:
+      labels:
+        app: t24-service
+        version: v1
+    spec:
+      containers:
+        - name: t24-service
+          image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: 'production'
+            - name: SERVER_PORT
+              value: '8080'
+            # Add your database and Kafka configurations
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: t24-service-secrets
+                  key: database-url
+                  optional: true
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: t24-service-secrets
+                  key: database-username
+                  optional: true
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: t24-service-secrets
+                  key: database-password
+                  optional: true
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: t24-service-secrets
+                  key: kafka-servers
+                  optional: true
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      imagePullPolicy: Always
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: t24-service-secrets
+  namespace: ${NAMESPACE}
+type: Opaque
+stringData:
+  database-url: 'jdbc:postgresql://your-rds-endpoint:5432/t24db'
+  database-username: 't24user'
+  database-password: 'your-database-password'
+  kafka-servers: 'your-kafka-broker:9092'

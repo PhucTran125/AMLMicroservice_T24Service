@@ -33,6 +33,9 @@ public class DataSourceAndIntegrationService {
     private AccountOpeningNotificationService notificationService;
 
     @Autowired
+    private TransactionNotificationService transactionNotificationService;
+
+    @Autowired
     private TransactionProducer transactionProducer;
 
     @Autowired
@@ -47,6 +50,10 @@ public class DataSourceAndIntegrationService {
     public ResponseDTO processTransfer(TransactionRequestDTO request) {
         Transaction entity = mapToTransaction(request);
         transactionRepository.save(entity);
+
+        // Send real-time notification for new transaction
+        transactionNotificationService.notifyTransactionCreated(entity);
+
         // transactionProducer.sendMessage(entity);
 
         ResponseDTO response = new ResponseDTO();
@@ -172,17 +179,25 @@ public class DataSourceAndIntegrationService {
         Transaction transaction = transactionRepository.findByIdAndStatus(
                 result.getId(),
                 Transaction.TransactionStatus.PENDING);
+        if (transaction == null)
+            return;
+
+        // Capture previous status for notification
+        Transaction.TransactionStatus previousStatus = transaction.getStatus();
+
         if (Objects.equals(result.getResultType(), T24AMLResult.ResultType.CUSTOMER_SCREENING_RESULT)) {
             switch (result.getStatus()) {
                 case CLEAR:
+                    transaction.setStatus(Transaction.TransactionStatus.APPROVED);
+                    transaction.setResult("Transaction approved after customer screening");
+                    transactionRepository.save(transaction);
                     transactionProducer.sendMessage(transaction);
                     break;
                 case SUSPENDED:
                 case SUSPICIOUS:
-                    transactionRepository.updateStatusByIdAndCurrentStatus(
-                            result.getId(),
-                            Transaction.TransactionStatus.REJECTED,
-                            Transaction.TransactionStatus.PENDING);
+                    transaction.setStatus(Transaction.TransactionStatus.REJECTED);
+                    transaction.setResult("Transaction rejected due to customer screening: " + result.getReason());
+                    transactionRepository.save(transaction);
                     break;
                 default:
                     throw new IllegalArgumentException("Unknown status: " + result.getStatus());
@@ -191,14 +206,20 @@ public class DataSourceAndIntegrationService {
             switch (result.getStatus()) {
                 case CLEAR:
                     transaction.setStatus(Transaction.TransactionStatus.APPROVED);
+                    transaction.setResult("Transaction approved based on AML result");
                     break;
                 case SUSPENDED:
                 case SUSPICIOUS:
                     transaction.setStatus(Transaction.TransactionStatus.REJECTED);
+                    transaction.setResult("Transaction rejected due to AML result: " + result.getReason());
+                    break;
                 default:
                     throw new IllegalArgumentException("Unknown status: " + result.getStatus());
             }
             transactionRepository.save(transaction);
         }
+
+        // Send real-time notification for status change
+        transactionNotificationService.notifyTransactionStatusChanged(transaction, previousStatus);
     }
 }

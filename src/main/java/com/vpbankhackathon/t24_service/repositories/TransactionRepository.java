@@ -8,9 +8,26 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Component
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     Transaction findByIdAndStatus(Long id, Transaction.TransactionStatus status);
+
+    /**
+     * Find transactions by status
+     */
+    List<Transaction> findByStatus(Transaction.TransactionStatus status);
+
+    /**
+     * Find transactions by customer ID
+     */
+    List<Transaction> findByCustomerId(Long customerId);
+
+    /**
+     * Find transactions by customer ID and status
+     */
+    List<Transaction> findByCustomerIdAndStatus(Long customerId, Transaction.TransactionStatus status);
 
     /**
      * Updates the status of a transaction by ID

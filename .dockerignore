@@ -1,0 +1,62 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation
+README.md
+DEPLOYMENT_GUIDE.md
+*.md
+
+# IDE
+.vscode
+.idea
+*.iml
+*.ipr
+*.iws
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Maven
+target/
+!target/*.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Kubernetes
+k8s/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp 

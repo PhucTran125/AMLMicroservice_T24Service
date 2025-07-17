@@ -1,17 +1,21 @@
-name: Build and Push to AWS ECR
+name: Build, Push and Deploy to EKS
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ['master']
 
 jobs:
-  build-and-push:
+  build-push-deploy:
     runs-on: ubuntu-latest
 
     env:
       AWS_REGION: ap-southeast-1
       ECR_REPO_NAME: t24-service
-      IMAGE_TAG: latest
+      IMAGE_TAG: ${{ github.sha }}
+      EKS_CLUSTER_NAME: t24-cluster
+      NAMESPACE: t24-namespace
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      SSL_CERT_ARN: ${{ secrets.SSL_CERT_ARN }}
 
     steps:
       - name: Checkout code
@@ -32,7 +36,40 @@ jobs:
         run: |
           docker build -t $ECR_REPO_NAME:$IMAGE_TAG .
           docker tag $ECR_REPO_NAME:$IMAGE_TAG ${{ steps.login-ecr.outputs.registry }}/$ECR_REPO_NAME:$IMAGE_TAG
+          docker tag $ECR_REPO_NAME:$IMAGE_TAG ${{ steps.login-ecr.outputs.registry }}/$ECR_REPO_NAME:latest
 
       - name: Push Docker image to Amazon ECR
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPO_NAME:$IMAGE_TAG
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPO_NAME:latest
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to EKS
+        run: |
+          envsubst < k8s/configmap.yaml | kubectl apply -f -
+          envsubst < k8s/deployment.yaml | kubectl apply -f -
+          envsubst < k8s/service.yaml | kubectl apply -f -
+          envsubst < k8s/ingress.yaml | kubectl apply -f -
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/t24-service -n $NAMESPACE --timeout=300s
+          kubectl get pods -n $NAMESPACE -l app=t24-service
+
+      - name: Get service URL
+        run: |
+          echo "Deployment completed successfully!"
+          kubectl get svc -n $NAMESPACE
+          kubectl get ingress -n $NAMESPACE

@@ -94,13 +94,19 @@
         <h1>🏦 T24 Service</h1>
         <p class="subtitle">Real-time AML Microservices Demo</p>
         
-        <a href="/account-opening-demo.html" class="demo-btn">
-            🚀 Launch Real-time Demo
-        </a>
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <a href="/account-opening-demo.html" class="demo-btn">
+                👤 Account Opening Demo
+            </a>
+            <a href="/transaction-demo.html" class="demo-btn">
+                💰 Transaction Demo
+            </a>
+        </div>
         
         <div class="features">
             <div class="feature">Real-time WebSocket notifications</div>
             <div class="feature">Account opening requests tracking</div>
+            <div class="feature">Transaction transfer monitoring</div>
             <div class="feature">Live status updates from AML processing</div>
             <div class="feature">Interactive form submission</div>
             <div class="feature">Beautiful responsive UI</div>
@@ -110,8 +116,9 @@
             <strong>Available REST Endpoints:</strong><br>
             <div class="api-endpoint">GET /api/v1/t24/accounts</div>
             <div class="api-endpoint">POST /api/v1/t24/accounts/open</div>
-            <div class="api-endpoint">GET /api/v1/t24/accounts/status/{status}</div>
-            <div class="api-endpoint">WebSocket: /ws</div>
+            <div class="api-endpoint">GET /api/v1/t24/transactions</div>
+            <div class="api-endpoint">POST /api/v1/t24/transactions/transfer</div>
+            <div class="api-endpoint">WebSocket Topics: /topic/account-opening, /topic/transaction</div>
         </div>
     </div>
 </body>

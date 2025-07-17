@@ -46,4 +46,5 @@ public class Transaction {
     private String country;
     @Enumerated(EnumType.STRING)
     private TransactionStatus status = TransactionStatus.PENDING;
+    private String result = "N/A"; // Default result message
 }

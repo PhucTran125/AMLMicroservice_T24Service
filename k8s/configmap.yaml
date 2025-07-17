@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: t24-service-config
+  namespace: ${NAMESPACE}
+  labels:
+    app: t24-service
+data:
+  application.properties: |
+    # Additional configuration can be added here
+    server.port=8080
+    spring.profiles.active=production
+
+    # Actuator endpoints
+    management.endpoints.web.exposure.include=health,info,metrics
+    management.endpoint.health.show-details=always
+    management.health.probes.enabled=true
+
+    # Logging
+    logging.level.root=INFO
+    logging.level.com.vpbankhackathon.t24_service=DEBUG
+
+    # WebSocket CORS
+    spring.web.cors.allowed-origins=*
+    spring.web.cors.allowed-methods=GET,POST,PUT,DELETE,OPTIONS
+    spring.web.cors.allowed-headers=*
+
+  logback-spring.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+        <springProfile name="production">
+            <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+                <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                    <providers>
+                        <timestamp/>
+                        <logLevel/>
+                        <loggerName/>
+                        <message/>
+                        <mdc/>
+                        <arguments/>
+                        <stackTrace/>
+                    </providers>
+                </encoder>
+            </appender>
+            
+            <logger name="com.vpbankhackathon.t24_service" level="INFO"/>
+            <logger name="org.springframework.web" level="WARN"/>
+            <logger name="org.hibernate" level="WARN"/>
+            
+            <root level="INFO">
+                <appender-ref ref="STDOUT"/>
+            </root>
+        </springProfile>
+    </configuration>
