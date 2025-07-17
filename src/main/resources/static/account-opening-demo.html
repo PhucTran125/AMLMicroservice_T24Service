@@ -436,7 +436,7 @@
                 <td>${account.nationality}</td>
                 <td>${account.residentialAddress}</td>
                 <td><span class="status-badge status-${account.status.toLowerCase()}">${account.status}</span></td>
-                <td>${account.result}</td>
+                <td><span class="reason">${account.result}</span></td>
                 <td>${new Date(account.timestamp).toLocaleString()}</td>
             `;
             
@@ -450,6 +450,9 @@
                 const statusCell = existingRow.querySelector('.status-badge');
                 statusCell.textContent = account.status;
                 statusCell.className = `status-badge status-${account.status.toLowerCase()}`;
+
+                const reasonCell = existingRow.querySelector('.reason');
+                reasonCell.textContent = account.result;
                 
                 // Remove highlight after animation
                 setTimeout(() => {

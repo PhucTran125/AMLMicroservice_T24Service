@@ -31,5 +31,5 @@ public class AccountOpening {
     @Enumerated(EnumType.STRING)
     private AccountOpeningStatus status = AccountOpeningStatus.PENDING;
     @Column(name = "result")
-    private String result;
+    private String result = "";
 }

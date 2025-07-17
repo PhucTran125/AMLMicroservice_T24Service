@@ -26,6 +26,7 @@ public class AccountOpeningNotificationDTO {
   private String residentialAddress;
   private AccountOpening.AccountOpeningStatus status;
   private AccountOpening.AccountOpeningStatus previousStatus;
+  private String result = "N/A"; // Default to "n/a" if not set
   private Long timestamp;
   private LocalDateTime eventTime;
 
@@ -40,6 +41,7 @@ public class AccountOpeningNotificationDTO {
     this.nationality = accountOpening.getNationality();
     this.residentialAddress = accountOpening.getResidentialAddress();
     this.status = accountOpening.getStatus();
+    this.result = "N/A"; // Default to "n/a" if not set
     this.timestamp = accountOpening.getTimestamp();
     this.eventTime = LocalDateTime.now();
   }
@@ -49,5 +51,6 @@ public class AccountOpeningNotificationDTO {
       AccountOpening.AccountOpeningStatus previousStatus) {
     this(NotificationType.STATUS_CHANGED, accountOpening);
     this.previousStatus = previousStatus;
+    this.result = accountOpening.getResult();
   }
 }
