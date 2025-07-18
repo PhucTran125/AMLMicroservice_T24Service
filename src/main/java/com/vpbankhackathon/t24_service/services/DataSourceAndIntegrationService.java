@@ -98,7 +98,7 @@ public class DataSourceAndIntegrationService {
         entity.setCustomerName(dto.getCustomerName());
         entity.setCustomerIdentificationNumber(dto.getCustomerIdentificationNumber());
         entity.setCountry(dto.getCountry());
-        entity.setDate(LocalDateTime.parse(dto.getDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        entity.setDate(LocalDateTime.now());
         return entity;
     }
 

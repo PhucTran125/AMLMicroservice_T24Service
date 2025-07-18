@@ -48,6 +48,15 @@ jobs:
         with:
           version: 'v1.28.0'
 
+      - name: Verify EKS cluster exists
+        run: |
+          if ! aws eks describe-cluster --name $EKS_CLUSTER_NAME --region $AWS_REGION > /dev/null 2>&1; then
+            echo "❌ Error: EKS cluster '$EKS_CLUSTER_NAME' not found in region '$AWS_REGION'"
+            echo "Please create the cluster first using AWS Console or the provided script"
+            exit 1
+          fi
+          echo "✅ EKS cluster '$EKS_CLUSTER_NAME' found"
+
       - name: Configure kubectl for EKS
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
